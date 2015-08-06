@@ -1,7 +1,7 @@
 <?php
 /**
  * @author mdixon7@gmail.com
- * PHP class to interact with Responsys REST API v6.23
+ * PHP class to interact with Responsys REST API
  * 2015-04-07
  */
 
@@ -16,7 +16,7 @@ class ResponsysRest
 	// login urls
 	const login_interact_2     = "https://login2.responsys.net";
 	const login_interact_5     = "https://login5.responsys.net";
-	
+
 	private $end_point    = null,
 			$auth_token   = null,
 			$debug        = false;
@@ -37,20 +37,20 @@ class ResponsysRest
 	 */
 	public function login( $login_url, $user_name, $password )
 	{
-		
 		$login_response = false;
 		
-		$login_request_string = "?user_name=$user_name&password=$password&auth_type=password";
+		$login_request_string = "user_name=$user_name&password=$password&auth_type=password";
 		
 		$curl_request = curl_init();
 		
 		$curlConfig = array(
-				CURLOPT_URL              => $login_url . self::login_service_url . $login_request_string,
-				CURLOPT_VERBOSE          => $this->debug,
-				CURLOPT_HTTPHEADER       => array(),
-				CURLOPT_RETURNTRANSFER   => true,
-				CURLOPT_POSTFIELDS       => array()
-		);
+							CURLOPT_URL            => $login_url . self::login_service_url,
+							CURLOPT_VERBOSE        => $this->debug,
+							CURLOPT_HTTPHEADER     => array('Content-Type: application/x-www-form-urlencoded'),
+							CURLOPT_RETURNTRANSFER => true,
+							CURLOPT_POST           => true,
+							CURLOPT_POSTFIELDS     => $login_request_string,
+							);
 		
 		curl_setopt_array( $curl_request, $curlConfig );
 		
