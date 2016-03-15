@@ -15,11 +15,15 @@ class ResponsysRest
 	
 	// login urls
 	const login_interact_2     = "https://login2.responsys.net";
+	const login_interact_2a    = "https://login2a.responsys.net";
 	const login_interact_5     = "https://login5.responsys.net";
 
 	private $end_point    = null,
 			$auth_token   = null,
 			$debug        = false;
+	
+	public $serverChallenge = null,
+		   $clientChallenge = null;
 	
 	public function __construct( $debug=false )
 	{
@@ -44,12 +48,15 @@ class ResponsysRest
 		$curl_request = curl_init();
 		
 		$curlConfig = array(
-							CURLOPT_URL            => $login_url . self::login_service_url,
+							CURLOPT_URL            => $login_url . self::login_service_url,// . "?" . $login_request_string,
 							CURLOPT_VERBOSE        => $this->debug,
 							CURLOPT_HTTPHEADER     => array('Content-Type: application/x-www-form-urlencoded'),
+							//CURLOPT_HTTPHEADER     => array('Content-Type: application/json'),
+							//CURLOPT_SSL_VERIFYPEER => true,
+							//CURLOPT_SSL_VERIFYHOST => 2,
 							CURLOPT_RETURNTRANSFER => true,
 							CURLOPT_POST           => true,
-							CURLOPT_POSTFIELDS     => $login_request_string,
+							CURLOPT_POSTFIELDS     => $login_request_string,//'user_name=gha.api&password=Ymv3MOBTH2&auth_type=password',
 							);
 		
 		curl_setopt_array( $curl_request, $curlConfig );
@@ -84,6 +91,125 @@ class ResponsysRest
 		curl_close( $curl_request );
 		return $login_response;
 	}
+	
+	public function base64SafeEncode( $data )
+	{
+		return rtrim( strtr( base64_encode( $data ), '+/', '-_'), '=');
+	}
+	
+	public function base64SafeDecode( $data )
+	{
+		return base64_decode( strtr( $data, '-_', '+/') );
+	}
+	
+	
+	public function authenticate_server( $login_url, $user_name, $base64Safedchallenge )
+	{
+		$login_response = false;
+		
+		$login_request_string = "user_name=$user_name&client_challenge=$base64Safedchallenge&auth_type=server";
+	
+		$curl_request = curl_init();
+	
+		$curlConfig = array(
+				CURLOPT_URL            => $login_url . self::login_service_url,
+				CURLOPT_VERBOSE        => $this->debug,
+				CURLOPT_HTTPHEADER     => array('Content-Type: application/x-www-form-urlencoded'),
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_POST           => true,
+				CURLOPT_POSTFIELDS     => $login_request_string,
+		);
+	
+		curl_setopt_array( $curl_request, $curlConfig );
+	
+		$result = curl_exec( $curl_request );
+	
+		$http_return_code = curl_getinfo( $curl_request, CURLINFO_HTTP_CODE);
+	
+		$json_result = json_decode($result, true);
+	
+		if ( $http_return_code == 200 && ( curl_errno( $curl_request ) == 0 ) )
+		{
+			//var_dump( $json_result);
+				
+			if( isset( $json_result['authToken'] ) && isset( $json_result['serverChallenge'] ) && isset( $json_result['clientChallenge'] ) ) 
+			{
+				$this->auth_token = $json_result['authToken'];
+				$this->serverChallenge  = $json_result['serverChallenge'];
+				$this->clientChallenge  = $json_result['clientChallenge'];
+				
+				$login_response   = true;
+			}
+			else
+			{
+				//print_r( $json_result );
+				$login_response = false;
+			}
+		}
+		else
+		{
+			$this->print_debug( $curl_request, $json_result );
+			$login_response = false;
+		}
+	
+		curl_close( $curl_request );
+		return $login_response;
+	}
+	
+	public function loginWithCertificate( $login_url, $user_name, $encrypted_server_challenge )
+	{
+		$login_response = false;
+	
+		$login_request_string = "user_name=$user_name&server_challenge=$encrypted_server_challenge&auth_type=client";
+	
+		$curl_request = curl_init();
+		
+		$headers = array( 'Content-Type: application/x-www-form-urlencoded',
+				'Authorization: ' . $this->auth_token );
+	
+		$curlConfig = array(
+				CURLOPT_URL            => $login_url . self::login_service_url,
+				CURLOPT_VERBOSE        => $this->debug,
+				CURLOPT_HTTPHEADER     => $headers,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_POST           => true,
+				CURLOPT_POSTFIELDS     => $login_request_string,
+		);
+	
+		curl_setopt_array( $curl_request, $curlConfig );
+	
+		$result = curl_exec( $curl_request );
+	
+		$http_return_code = curl_getinfo( $curl_request, CURLINFO_HTTP_CODE);
+	
+		$json_result = json_decode($result, true);
+	
+		if ( $http_return_code == 200 && ( curl_errno( $curl_request ) == 0 ) )
+		{
+			//var_dump( $json_result);
+	
+			if( isset( $json_result['authToken'] ) && isset( $json_result['endPoint'] ) )
+			{
+				$this->auth_token = $json_result['authToken'];
+				$this->end_point  = $json_result['endPoint'];
+				$login_response = true;
+			}
+			else 
+			{
+				$login_response = false;
+			}
+		}
+		else
+		{
+			$this->print_debug( $curl_request, $json_result );
+			$login_response = false;
+		}
+	
+		curl_close( $curl_request );
+		return $login_response;
+	}
+	
+	
 	
 	/**
 	 * @param  String $folderName
