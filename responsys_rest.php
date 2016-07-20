@@ -12,6 +12,7 @@ class ResponsysRest
 	const campaign_service_url = "/rest/api/v1/campaigns/";
 	const list_service_url     = "/rest/api/v1/lists/";
 	const event_service_url    = "/rest/api/v1/events/";
+	const content_lib_item_url = "/rest/api/v1.1/clItems";
 	
 	// login urls
 	const login_interact_2     = "https://login2.responsys.net";
@@ -52,8 +53,8 @@ class ResponsysRest
 							CURLOPT_VERBOSE        => $this->debug,
 							CURLOPT_HTTPHEADER     => array('Content-Type: application/x-www-form-urlencoded'),
 							//CURLOPT_HTTPHEADER     => array('Content-Type: application/json'),
-							//CURLOPT_SSL_VERIFYPEER => true,
-							//CURLOPT_SSL_VERIFYHOST => 2,
+							CURLOPT_SSL_VERIFYPEER => false,
+							CURLOPT_SSL_VERIFYHOST => false,
 							CURLOPT_RETURNTRANSFER => true,
 							CURLOPT_POST           => true,
 							CURLOPT_POSTFIELDS     => $login_request_string,//'user_name=gha.api&password=Ymv3MOBTH2&auth_type=password',
@@ -270,7 +271,56 @@ class ResponsysRest
 		return $result;
 	}
 	
-	
+	public function createContentLibraryItem( $content_lib_path, $file_name, $base64_binary_data )
+	{
+		$result = array();
+		
+		if( isset( $this->auth_token ) && isset( $this->end_point ) )
+		{
+			$headers = array( 'Content-Type: application/json',
+					'Authorization: ' . $this->auth_token );
+				
+			$params = array();
+			$params['itemPath'] = $content_lib_path . "/" . $file_name;
+			$params['itemData'] = $base64_binary_data;
+				
+			$params = json_encode( $params );
+				
+			echo $params;
+				
+			$curl_request = curl_init();
+				
+			$curlConfig = array( CURLOPT_URL            => $this->end_point . self::content_lib_item_url,
+								 CURLOPT_VERBOSE        => $this->debug,
+								 CURLOPT_HTTPHEADER     => $headers,
+								 CURLOPT_RETURNTRANSFER => true,
+								 CURLOPT_POSTFIELDS     => $params );
+				
+			curl_setopt_array( $curl_request, $curlConfig );
+				
+			$curl_result = curl_exec( $curl_request );
+				
+			$http_return_code = curl_getinfo( $curl_request, CURLINFO_HTTP_CODE);
+				
+			$json_result = json_decode( $curl_result, true );
+				
+			if ( $http_return_code == 200 && ( curl_errno( $curl_request ) == 0 ) )
+			{
+				$result = $json_result;
+			}
+			else
+			{
+				$this->print_debug( $curl_request, $json_result );
+			}
+		}
+		else
+		{
+			print ("You don't appear to be logged in, please login before attempting any operations.");
+		}
+		
+		curl_close( $curl_request );
+		return $result;
+	}
 	
 	
 	
