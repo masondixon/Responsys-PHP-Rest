@@ -1,7 +1,6 @@
 <?php
 /*
- * manageList REST call will insert and / or update a record in a Responsys contact list
- * Call accepts up to 200 records per invocation, this is referred to as batching, and is preferable to spamming the system with 1 off requests
+ * createContentLibraryItem allows developer to upload binary content to an existing content library folder
  */
 
 try 
@@ -24,7 +23,6 @@ try
 		$file_name        = 'random_file_mason.jpg';
 		$image_data       = base64_encode( file_get_contents( 'pic1.jpg' ) );	
 		$result           = $rest_api->createContentLibraryItem( $content_location, $file_name, $image_data );
-		//print_r( $result );
 		return $result;
 	}
 	else
@@ -38,7 +36,7 @@ catch( Exception $err )
 {
 	echo "----- Exception -----";
 	var_dump( $err );
-	die("----- DYING -----");
+	die( "----- Exiting -----" );
 }
 
 ?>
